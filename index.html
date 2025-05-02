@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>40-Day Habit Challenge Tracker</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
         tailwind.config = {
             theme: {
@@ -355,4 +355,500 @@
                 addHabitBtn: document.getElementById('add-habit-btn'),
                 completeAllBtn: document.getElementById('complete-all-btn'),
                 resetDayBtn: document.getElementById('reset-day-btn'),
-                addHabitModal: document.getElementById('add-hab
+                addHabitModal: document.getElementById('add-habit-modal'),
+                cancelHabitBtn: document.getElementById('cancel-habit-btn'),
+                saveHabitBtn: document.getElementById('save-habit-btn'),
+                habitName: document.getElementById('habit-name'),
+                habitCategory: document.getElementById('habit-category'),
+                difficultyBtns: document.querySelectorAll('.difficulty-btn'),
+                confirmationModal: document.getElementById('confirmation-modal'),
+                cancelConfirmBtn: document.getElementById('cancel-confirm-btn'),
+                confirmActionBtn: document.getElementById('confirm-action-btn'),
+                confirmationTitle: document.getElementById('confirmation-title'),
+                confirmationMessage: document.getElementById('confirmation-message'),
+                currentDate: document.getElementById('current-date'),
+                currentDay: document.getElementById('current-day'),
+                daysCompleted: document.getElementById('days-completed'),
+                daysRemaining: document.getElementById('days-remaining'),
+                currentStreak: document.getElementById('current-streak'),
+                streakProgress: document.getElementById('streak-progress'),
+                remainingProgress: document.getElementById('remaining-progress'),
+                totalCompleted: document.getElementById('total-completed'),
+                completionRate: document.getElementById('completion-rate'),
+                bestStreak: document.getElementById('best-streak'),
+                daysMissed: document.getElementById('days-missed'),
+                dailyMotivation: document.getElementById('daily-motivation'),
+                dailyNotes: document.getElementById('daily-notes'),
+                saveNotesBtn: document.getElementById('save-notes-btn'),
+                calendarContainer: document.getElementById('calendar-container'),
+                currentMonthYear: document.getElementById('current-month-year')
+            };
+            
+            // Initialize the app
+            function init() {
+                loadState();
+                setupEventListeners();
+                renderUI();
+                updateProgressCircle();
+                generateCalendar();
+                showRandomMotivation();
+            }
+            
+            // Load state from localStorage
+            function loadState() {
+                const savedState = localStorage.getItem('40DayHabitChallenge');
+                if (savedState) {
+                    const parsedState = JSON.parse(savedState);
+                    Object.assign(state, parsedState);
+                    
+                    // If challenge was started before, calculate current day based on date
+                    if (state.challengeStartDate) {
+                        const today = new Date();
+                        const startDate = new Date(state.challengeStartDate);
+                        const diffTime = today - startDate;
+                        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                        
+                        if (diffDays >= 1 && diffDays <= 40) {
+                            state.currentDay = diffDays;
+                        } else if (diffDays > 40) {
+                            state.currentDay = 40;
+                        }
+                    }
+                } else {
+                    // Initialize with default habits if no saved state
+                    state.habits = [
+                        { id: generateId(), name: 'Drink 8 glasses of water', category: 'health', difficulty: 'easy', completed: false },
+                        { id: generateId(), name: 'Exercise for 30 minutes', category: 'health', difficulty: 'medium', completed: false },
+                        { id: generateId(), name: 'Read for 20 minutes', category: 'learning', difficulty: 'medium', completed: false },
+                        { id: generateId(), name: 'Meditate for 10 minutes', category: 'mindfulness', difficulty: 'easy', completed: false }
+                    ];
+                    
+                    state.challengeStartDate = new Date().toISOString();
+                    state.completedDays = {};
+                    state.dailyNotes = {};
+                }
+                
+                // Load today's notes if they exist
+                if (state.dailyNotes[state.currentDay]) {
+                    elements.dailyNotes.value = state.dailyNotes[state.currentDay];
+                } else {
+                    elements.dailyNotes.value = '';
+                }
+            }
+            
+            // Save state to localStorage
+            function saveState() {
+                localStorage.setItem('40DayHabitChallenge', JSON.stringify(state));
+            }
+            
+            // Set up event listeners
+            function setupEventListeners() {
+                // Add habit button
+                elements.addHabitBtn.addEventListener('click', () => {
+                    elements.addHabitModal.classList.remove('hidden');
+                    elements.habitName.focus();
+                });
+                
+                // Cancel add habit
+                elements.cancelHabitBtn.addEventListener('click', () => {
+                    elements.addHabitModal.classList.add('hidden');
+                    elements.habitName.value = '';
+                });
+                
+                // Save habit
+                elements.saveHabitBtn.addEventListener('click', () => {
+                    const name = elements.habitName.value.trim();
+                    if (name) {
+                        const newHabit = {
+                            id: generateId(),
+                            name: name,
+                            category: elements.habitCategory.value,
+                            difficulty: state.selectedDifficulty,
+                            completed: false
+                        };
+                        
+                        state.habits.push(newHabit);
+                        saveState();
+                        renderHabits();
+                        elements.addHabitModal.classList.add('hidden');
+                        elements.habitName.value = '';
+                    }
+                });
+                
+                // Difficulty buttons
+                elements.difficultyBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        elements.difficultyBtns.forEach(b => b.classList.remove('bg-primary-200', 'text-primary-800', 'ring-2', 'ring-primary-500'));
+                        btn.classList.add('bg-primary-200', 'text-primary-800', 'ring-2', 'ring-primary-500');
+                        state.selectedDifficulty = btn.dataset.difficulty;
+                    });
+                });
+                
+                // Complete all habits
+                elements.completeAllBtn.addEventListener('click', () => {
+                    showConfirmation(
+                        'Complete All Habits',
+                        'Are you sure you want to mark all habits as completed for today?',
+                        () => {
+                            state.habits.forEach(habit => {
+                                habit.completed = true;
+                            });
+                            saveState();
+                            renderHabits();
+                        }
+                    );
+                });
+                
+                // Reset day
+                elements.resetDayBtn.addEventListener('click', () => {
+                    showConfirmation(
+                        'Reset Today',
+                        'Are you sure you want to reset all habits for today? This cannot be undone.',
+                        () => {
+                            state.habits.forEach(habit => {
+                                habit.completed = false;
+                            });
+                            saveState();
+                            renderHabits();
+                        }
+                    );
+                });
+                
+                // Save notes
+                elements.saveNotesBtn.addEventListener('click', () => {
+                    state.dailyNotes[state.currentDay] = elements.dailyNotes.value;
+                    saveState();
+                    
+                    // Show confirmation
+                    const originalText = elements.saveNotesBtn.textContent;
+                    elements.saveNotesBtn.textContent = 'Saved!';
+                    elements.saveNotesBtn.classList.remove('bg-primary-600', 'hover:bg-primary-700');
+                    elements.saveNotesBtn.classList.add('bg-green-500', 'hover:bg-green-600');
+                    
+                    setTimeout(() => {
+                        elements.saveNotesBtn.textContent = originalText;
+                        elements.saveNotesBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
+                        elements.saveNotesBtn.classList.add('bg-primary-600', 'hover:bg-primary-700');
+                    }, 2000);
+                });
+                
+                // Confirmation modal
+                elements.cancelConfirmBtn.addEventListener('click', () => {
+                    elements.confirmationModal.classList.add('hidden');
+                });
+            }
+            
+            // Show confirmation dialog
+            function showConfirmation(title, message, confirmCallback) {
+                elements.confirmationTitle.textContent = title;
+                elements.confirmationMessage.textContent = message;
+                elements.confirmationModal.classList.remove('hidden');
+                
+                // Set up confirm button
+                const confirmHandler = () => {
+                    confirmCallback();
+                    elements.confirmationModal.classList.add('hidden');
+                    elements.confirmActionBtn.removeEventListener('click', confirmHandler);
+                };
+                
+                elements.confirmActionBtn.addEventListener('click', confirmHandler);
+            }
+            
+            // Generate a unique ID
+            function generateId() {
+                return Date.now().toString(36) + Math.random().toString(36).substr(2);
+            }
+            
+            // Render the UI
+            function renderUI() {
+                renderHabits();
+                updateDateDisplay();
+                updateStats();
+            }
+            
+            // Render habits list
+            function renderHabits() {
+                if (state.habits.length === 0) {
+                    elements.habitsContainer.innerHTML = `
+                        <div class="text-center py-8 text-primary-500">
+                            <i class="fas fa-clipboard-list fa-2x mb-3"></i>
+                            <p>No habits added yet. Click "Add Habit" to get started!</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                elements.habitsContainer.innerHTML = '';
+                
+                state.habits.forEach(habit => {
+                    const habitElement = document.createElement('div');
+                    habitElement.className = `habit-card bg-white border border-primary-100 rounded-lg p-4 transition ${habit.completed ? 'opacity-75' : ''}`;
+                    
+                    habitElement.innerHTML = `
+                        <div class="flex items-center">
+                            <button class="habit-toggle mr-3 flex-shrink-0 w-6 h-6 rounded-full border-2 ${getCheckboxClass(habit)} flex items-center justify-center transition" data-id="${habit.id}">
+                                ${habit.completed ? '<i class="fas fa-check text-white text-xs"></i>' : ''}
+                            </button>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="font-medium text-primary-800 truncate ${habit.completed ? 'line-through' : ''}">${habit.name}</h3>
+                                <div class="flex items-center mt-1">
+                                    <span class="text-xs px-2 py-0.5 rounded-full ${getCategoryClass(habit)} mr-2">${getCategoryName(habit.category)}</span>
+                                    <span class="text-xs px-2 py-0.5 rounded-full ${getDifficultyClass(habit)}">${habit.difficulty}</span>
+                                </div>
+                            </div>
+                            <button class="habit-delete ml-2 text-primary-400 hover:text-primary-600 transition" data-id="${habit.id}">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    `;
+                    
+                    elements.habitsContainer.appendChild(habitElement);
+                });
+                
+                // Add event listeners to checkboxes and delete buttons
+                document.querySelectorAll('.habit-toggle').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const habitId = this.dataset.id;
+                        const habit = state.habits.find(h => h.id === habitId);
+                        if (habit) {
+                            habit.completed = !habit.completed;
+                            saveState();
+                            renderHabits();
+                            updateStats();
+                        }
+                    });
+                });
+                
+                document.querySelectorAll('.habit-delete').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const habitId = this.dataset.id;
+                        
+                        showConfirmation(
+                            'Delete Habit',
+                            'Are you sure you want to delete this habit? This action cannot be undone.',
+                            () => {
+                                state.habits = state.habits.filter(h => h.id !== habitId);
+                                saveState();
+                                renderHabits();
+                                updateStats();
+                            }
+                        );
+                    });
+                });
+            }
+            
+            // Get checkbox class based on habit status
+            function getCheckboxClass(habit) {
+                if (habit.completed) {
+                    switch (habit.difficulty) {
+                        case 'easy': return 'border-green-300 bg-green-500';
+                        case 'medium': return 'border-yellow-300 bg-yellow-500';
+                        case 'hard': return 'border-red-300 bg-red-500';
+                        default: return 'border-primary-300 bg-primary-500';
+                    }
+                } else {
+                    return 'border-primary-300 hover:border-primary-400';
+                }
+            }
+            
+            // Get category class
+            function getCategoryClass(habit) {
+                switch (habit.category) {
+                    case 'health': return 'bg-green-100 text-green-800';
+                    case 'productivity': return 'bg-blue-100 text-blue-800';
+                    case 'mindfulness': return 'bg-purple-100 text-purple-800';
+                    case 'learning': return 'bg-yellow-100 text-yellow-800';
+                    case 'relationships': return 'bg-pink-100 text-pink-800';
+                    default: return 'bg-gray-100 text-gray-800';
+                }
+            }
+            
+            // Get category name
+            function getCategoryName(category) {
+                switch (category) {
+                    case 'health': return 'Health';
+                    case 'productivity': return 'Productivity';
+                    case 'mindfulness': return 'Mindfulness';
+                    case 'learning': return 'Learning';
+                    case 'relationships': return 'Relationships';
+                    default: return 'Other';
+                }
+            }
+            
+            // Get difficulty class
+            function getDifficultyClass(habit) {
+                switch (habit.difficulty) {
+                    case 'easy': return 'bg-green-100 text-green-800';
+                    case 'medium': return 'bg-yellow-100 text-yellow-800';
+                    case 'hard': return 'bg-red-100 text-red-800';
+                    default: return 'bg-gray-100 text-gray-800';
+                }
+            }
+            
+            // Update date display
+            function updateDateDisplay() {
+                const today = new Date();
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                elements.currentDate.textContent = today.toLocaleDateString('en-US', options);
+                elements.currentDay.textContent = state.currentDay;
+            }
+            
+            // Update stats
+            function updateStats() {
+                // Calculate completed habits for today
+                const completedToday = state.habits.filter(h => h.completed).length;
+                const totalHabits = state.habits.length;
+                const todayCompletion = totalHabits > 0 ? Math.round((completedToday / totalHabits) * 100) : 0;
+                
+                // Update progress circle
+                updateProgressCircle();
+                
+                // Update days completed/remaining
+                const daysCompleted = state.currentDay - 1; // Since we're on day X
+                const daysRemaining = 40 - state.currentDay;
+                
+                elements.daysCompleted.textContent = daysCompleted;
+                elements.daysRemaining.textContent = `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}`;
+                elements.remainingProgress.style.width = `${(daysRemaining / 40) * 100}%`;
+                
+                // Calculate streaks (simplified for this example)
+                const currentStreak = calculateCurrentStreak();
+                const bestStreak = calculateBestStreak();
+                
+                elements.currentStreak.textContent = `${currentStreak} day${currentStreak !== 1 ? 's' : ''}`;
+                elements.streakProgress.style.width = `${(currentStreak / 40) * 100}%`;
+                elements.bestStreak.textContent = bestStreak;
+                
+                // Update total stats
+                const totalCompleted = state.habits.reduce((sum, habit) => {
+                    return sum + (habit.completed ? 1 : 0);
+                }, 0);
+                
+                const totalPossible = state.habits.length * 40;
+                const completionRate = totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
+                
+                elements.totalCompleted.textContent = totalCompleted;
+                elements.completionRate.textContent = `${completionRate}%`;
+                
+                // Days missed is simplified for this example
+                const daysMissed = Math.max(0, state.currentDay - 1 - currentStreak);
+                elements.daysMissed.textContent = daysMissed;
+            }
+            
+            // Calculate current streak (simplified)
+            function calculateCurrentStreak() {
+                // In a real app, you'd check the actual completion history
+                // For this demo, we'll assume a streak if today is completed
+                const todayCompleted = state.habits.every(h => h.completed);
+                return todayCompleted ? state.currentDay : Math.max(0, state.currentDay - 1);
+            }
+            
+            // Calculate best streak (simplified)
+            function calculateBestStreak() {
+                // In a real app, you'd check the actual completion history
+                // For this demo, we'll return the current day if all habits are completed
+                const todayCompleted = state.habits.every(h => h.completed);
+                return todayCompleted ? state.currentDay : Math.max(0, state.currentDay - 1);
+            }
+            
+            // Update progress circle
+            function updateProgressCircle() {
+                const completedToday = state.habits.filter(h => h.completed).length;
+                const totalHabits = state.habits.length;
+                const percent = totalHabits > 0 ? (completedToday / totalHabits) * 100 : 0;
+                const circumference = 2 * Math.PI * 40;
+                const offset = circumference - (percent / 100) * circumference;
+                
+                const circle = document.querySelector('.progress-ring__circle');
+                if (circle) {
+                    circle.style.strokeDasharray = `${circumference} ${circumference}`;
+                    circle.style.strokeDashoffset = offset;
+                }
+            }
+            
+            // Show random motivation
+            function showRandomMotivation() {
+                const randomIndex = Math.floor(Math.random() * motivationalQuotes.length);
+                elements.dailyMotivation.textContent = `"${motivationalQuotes[randomIndex]}"`;
+            }
+            
+            // Generate calendar view
+            function generateCalendar() {
+                const today = new Date();
+                const startDate = new Date(state.challengeStartDate || today);
+                const endDate = new Date(startDate);
+                endDate.setDate(endDate.getDate() + 39); // 40-day challenge
+                
+                // Set calendar to show the current month
+                const currentMonth = today.getMonth();
+                const currentYear = today.getFullYear();
+                
+                // Set month/year display
+                elements.currentMonthYear.textContent = new Date(currentYear, currentMonth).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                
+                // Get first day of month and total days in month
+                const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+                const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+                
+                // Create calendar grid
+                let calendarHTML = `
+                    <div class="grid grid-cols-7 gap-1">
+                        <div class="h-8 flex items-center justify-center text-sm font-medium text-primary-600">Sun</div>
+                        <div class="h-8 flex items-center justify-center text-sm font-medium text-primary-600">Mon</div>
+                        <div class="h-8 flex items-center justify-center text-sm font-medium text-primary-600">Tue</div>
+                        <div class="h-8 flex items-center justify-center text-sm font-medium text-primary-600">Wed</div>
+                        <div class="h-8 flex items-center justify-center text-sm font-medium text-primary-600">Thu</div>
+                        <div class="h-8 flex items-center justify-center text-sm font-medium text-primary-600">Fri</div>
+                        <div class="h-8 flex items-center justify-center text-sm font-medium text-primary-600">Sat</div>
+                `;
+                
+                // Add empty cells for days before the first of the month
+                for (let i = 0; i < firstDay; i++) {
+                    calendarHTML += `<div class="h-10"></div>`;
+                }
+                
+                // Add days of the month
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const date = new Date(currentYear, currentMonth, day);
+                    const isInChallenge = date >= startDate && date <= endDate;
+                    const isPast = date < today && date.getDate() !== today.getDate();
+                    const isToday = date.getDate() === today.getDate() && date.getMonth() === today.getMonth();
+                    const dayOfChallenge = Math.floor((date - startDate) / (1000 * 60 * 60 * 24)) + 1;
+                    
+                    let dayClass = 'h-10 flex items-center justify-center rounded-full text-sm';
+                    let dayContent = day;
+                    
+                    if (isInChallenge) {
+                        if (isToday) {
+                            dayClass += ' bg-primary-600 text-white font-bold animate-pulse-slow';
+                        } else if (isPast) {
+                            // For past days in challenge, show completion status
+                            // (simplified - in real app you'd check actual completion)
+                            const isCompleted = dayOfChallenge < state.currentDay;
+                            dayClass += isCompleted ? ' bg-green-100 text-green-800' : ' bg-red-100 text-red-800';
+                            dayContent = `<span class="relative">${day}<span class="absolute -top-1 -right-1 text-xs">${dayOfChallenge}</span></span>`;
+                        } else {
+                            // Future challenge days
+                            dayClass += ' bg-primary-100 text-primary-800';
+                            dayContent = `<span class="relative">${day}<span class="absolute -top-1 -right-1 text-xs">${dayOfChallenge}</span></span>`;
+                        }
+                    } else if (isToday) {
+                        dayClass += ' bg-gray-200 text-gray-800';
+                    } else {
+                        dayClass += ' text-gray-500';
+                    }
+                    
+                    calendarHTML += `<div class="${dayClass}">${dayContent}</div>`;
+                }
+                
+                calendarHTML += `</div>`;
+                elements.calendarContainer.innerHTML = calendarHTML;
+            }
+            
+            // Initialize the app
+            init();
+        });
+    </script>
+</body>
+</html>
