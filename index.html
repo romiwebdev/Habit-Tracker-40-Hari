@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>40-Day Habit Challenge Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .animate-pulse-slow {
+            animation: pulse 3s infinite;
+        }
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.5s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        .habit-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-primary-50 to-primary-100 min-h-screen font-sans">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-primary-800 mb-4">40-Day Habit Challenge</h1>
+            <p class="text-lg text-primary-600 max-w-2xl mx-auto">Transform your life one day at a time. Track your progress and build lasting habits.</p>
+        </header>
+
+        <!-- Main Dashboard -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+            <!-- Progress Summary -->
+            <div class="bg-white rounded-xl shadow-lg p-6 lg:col-span-1 flex flex-col">
+                <h2 class="text-xl font-semibold text-primary-800 mb-4">Your Progress</h2>
+                
+                <div class="flex justify-center mb-6">
+                    <div class="relative w-40 h-40">
+                        <svg class="w-full h-full" viewBox="0 0 100 100">
+                            <circle class="text-primary-100" stroke-width="8" stroke="currentColor" fill="transparent" r="40" cx="50" cy="50" />
+                            <circle class="progress-ring__circle text-primary-600" stroke-width="8" stroke-linecap="round" stroke="currentColor" fill="transparent" r="40" cx="50" cy="50" />
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <span id="days-completed" class="text-3xl font-bold text-primary-800">0</span>
+                            <span class="text-primary-600 text-sm">of 40 days</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="space-y-4 mb-6">
+                    <div>
+                        <div class="flex justify-between text-sm text-primary-700 mb-1">
+                            <span>Current Streak</span>
+                            <span id="current-streak">0 days</span>
+                        </div>
+                        <div class="w-full bg-primary-100 rounded-full h-2">
+                            <div id="streak-progress" class="bg-primary-500 h-2 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="flex justify-between text-sm text-primary-700 mb-1">
+                            <span>Days Remaining</span>
+                            <span id="days-remaining">40 days</span>
+                        </div>
+                        <div class="w-full bg-primary-100 rounded-full h-2">
+                            <div id="remaining-progress" class="bg-primary-400 h-2 rounded-full" style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-auto">
+                    <div class="bg-primary-50 rounded-lg p-4">
+                        <h3 class="font-medium text-primary-800 mb-2">Today's Motivation</h3>
+                        <p id="daily-motivation" class="text-sm text-primary-600 italic">"The secret of getting ahead is getting started."</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Current Day Card -->
+            <div class="bg-white rounded-xl shadow-lg p-6 lg:col-span-2">
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h2 class="text-xl font-semibold text-primary-800">Today's Habits</h2>
+                        <p id="current-date" class="text-primary-600">Loading date...</p>
+                    </div>
+                    <div class="bg-primary-100 text-primary-800 px-3 py-1 rounded-full text-sm font-medium">
+                        Day <span id="current-day">1</span>/40
+                    </div>
+                </div>
+                
+                <div id="habits-container" class="space-y-3 mb-6">
+                    <!-- Habits will be loaded here -->
+                    <div class="text-center py-8 text-primary-500">
+                        <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+                        <p>Loading your habits...</p>
+                    </div>
+                </div>
+                
+                <div class="flex flex-wrap gap-3">
+                    <button id="add-habit-btn" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center transition">
+                        <i class="fas fa-plus mr-2"></i> Add Habit
+                    </button>
+                    <button id="complete-all-btn" class="bg-primary-100 hover:bg-primary-200 text-primary-800 px-4 py-2 rounded-lg flex items-center transition">
+                        <i class="fas fa-check-double mr-2"></i> Complete All
+                    </button>
+                    <button id="reset-day-btn" class="bg-white hover:bg-gray-50 border border-primary-300 text-primary-800 px-4 py-2 rounded-lg flex items-center transition">
+                        <i class="fas fa-undo mr-2"></i> Reset Day
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Calendar View -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-12">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold text-primary-800">Challenge Timeline</h2>
+                <div class="flex items-center space-x-2">
+                    <span id="current-month-year" class="text-primary-600">June 2023</span>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <div id="calendar-container" class="min-w-max pb-2">
+                    <!-- Calendar will be generated here -->
+                    <div class="grid grid-cols-7 gap-1">
+                        <div class="h-8 flex items-center justify-center text-sm font-medium text-primary-600">Sun</div>
+                        <div class="h-8 flex items-center justify-center text-sm font-medium text-primary-600">Mon</div>
+                        <div class="h-8 flex items-center justify-center text-sm font-medium text-primary-600">Tue</div>
+                        <div class="h-8 flex items-center justify-center text-sm font-medium text-primary-600">Wed</div>
+                        <div class="h-8 flex items-center justify-center text-sm font-medium text-primary-600">Thu</div>
+                        <div class="h-8 flex items-center justify-center text-sm font-medium text-primary-600">Fri</div>
+                        <div class="h-8 flex items-center justify-center text-sm font-medium text-primary-600">Sat</div>
+                        
+                        <div class="col-span-7 flex items-center justify-center py-8">
+                            <i class="fas fa-spinner fa-spin fa-2x text-primary-400"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Stats & Achievements -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+            <!-- Statistics -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-primary-800 mb-6">Your Statistics</h2>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-primary-50 rounded-lg p-4 text-center">
+                        <div class="text-primary-800 font-bold text-3xl mb-1" id="total-completed">0</div>
+                        <div class="text-primary-600 text-sm">Habits Completed</div>
+                    </div>
+                    <div class="bg-primary-50 rounded-lg p-4 text-center">
+                        <div class="text-primary-800 font-bold text-3xl mb-1" id="completion-rate">0%</div>
+                        <div class="text-primary-600 text-sm">Completion Rate</div>
+                    </div>
+                    <div class="bg-primary-50 rounded-lg p-4 text-center">
+                        <div class="text-primary-800 font-bold text-3xl mb-1" id="best-streak">0</div>
+                        <div class="text-primary-600 text-sm">Best Streak</div>
+                    </div>
+                    <div class="bg-primary-50 rounded-lg p-4 text-center">
+                        <div class="text-primary-800 font-bold text-3xl mb-1" id="days-missed">0</div>
+                        <div class="text-primary-600 text-sm">Days Missed</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Achievements -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-semibold text-primary-800 mb-6">Achievements</h2>
+                
+                <div id="achievements-container" class="space-y-4">
+                    <div class="flex items-start">
+                        <div class="bg-primary-100 text-primary-800 rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0 mr-3">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-medium text-primary-800">Getting Started</h3>
+                            <p class="text-sm text-primary-600">Complete your first day of the challenge</p>
+                            <div class="w-full bg-primary-100 rounded-full h-1.5 mt-2">
+                                <div class="bg-primary-600 h-1.5 rounded-full" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start">
+                        <div class="bg-primary-100 text-primary-800 rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0 mr-3">
+                            <i class="fas fa-fire"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-medium text-primary-800">7-Day Streak</h3>
+                            <p class="text-sm text-primary-600">Complete 7 days in a row</p>
+                            <div class="w-full bg-primary-100 rounded-full h-1.5 mt-2">
+                                <div class="bg-primary-600 h-1.5 rounded-full" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-start">
+                        <div class="bg-primary-100 text-primary-800 rounded-full w-10 h-10 flex items-center justify-center flex-shrink-0 mr-3">
+                            <i class="fas fa-star"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-medium text-primary-800">Halfway There</h3>
+                            <p class="text-sm text-primary-600">Complete 20 days of the challenge</p>
+                            <div class="w-full bg-primary-100 rounded-full h-1.5 mt-2">
+                                <div class="bg-primary-600 h-1.5 rounded-full" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notes Section -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-12">
+            <h2 class="text-xl font-semibold text-primary-800 mb-4">Daily Reflection</h2>
+            <textarea id="daily-notes" class="w-full h-32 border border-primary-200 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-transparent" placeholder="How did today go? What challenges did you face? What successes did you have?"></textarea>
+            <div class="flex justify-end mt-2">
+                <button id="save-notes-btn" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition">
+                    Save Reflection
+                </button>
+            </div>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="text-center text-primary-600 text-sm">
+            <p>40-Day Habit Challenge Tracker • Made with <i class="fas fa-heart text-primary-500"></i> for your success</p>
+            <p class="mt-1">Your progress is saved automatically in your browser</p>
+        </footer>
+    </div>
+    
+    <!-- Add Habit Modal -->
+    <div id="add-habit-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div class="p-6">
+                <h3 class="text-xl font-semibold text-primary-800 mb-4">Add New Habit</h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label for="habit-name" class="block text-sm font-medium text-primary-700 mb-1">Habit Name</label>
+                        <input type="text" id="habit-name" class="w-full border border-primary-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-transparent" placeholder="e.g. Drink 8 glasses of water">
+                    </div>
+                    
+                    <div>
+                        <label for="habit-category" class="block text-sm font-medium text-primary-700 mb-1">Category</label>
+                        <select id="habit-category" class="w-full border border-primary-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-300 focus:border-transparent">
+                            <option value="health">Health & Fitness</option>
+                            <option value="productivity">Productivity</option>
+                            <option value="mindfulness">Mindfulness</option>
+                            <option value="learning">Learning</option>
+                            <option value="relationships">Relationships</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-primary-700 mb-1">Difficulty</label>
+                        <div class="flex space-x-2">
+                            <button type="button" data-difficulty="easy" class="difficulty-btn flex-1 bg-green-100 text-green-800 px-3 py-1 rounded-lg text-sm">Easy</button>
+                            <button type="button" data-difficulty="medium" class="difficulty-btn flex-1 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-lg text-sm">Medium</button>
+                            <button type="button" data-difficulty="hard" class="difficulty-btn flex-1 bg-red-100 text-red-800 px-3 py-1 rounded-lg text-sm">Hard</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 flex justify-end space-x-3">
+                    <button id="cancel-habit-btn" type="button" class="bg-white hover:bg-gray-50 border border-primary-300 text-primary-800 px-4 py-2 rounded-lg transition">
+                        Cancel
+                    </button>
+                    <button id="save-habit-btn" type="button" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition">
+                        Add Habit
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Confirmation Modal -->
+    <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div class="p-6">
+                <h3 id="confirmation-title" class="text-xl font-semibold text-primary-800 mb-4">Confirm Action</h3>
+                <p id="confirmation-message" class="text-primary-600 mb-6">Are you sure you want to perform this action?</p>
+                
+                <div class="flex justify-end space-x-3">
+                    <button id="cancel-confirm-btn" type="button" class="bg-white hover:bg-gray-50 border border-primary-300 text-primary-800 px-4 py-2 rounded-lg transition">
+                        Cancel
+                    </button>
+                    <button id="confirm-action-btn" type="button" class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition">
+                        Confirm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // App state
+            const state = {
+                habits: [],
+                challengeStartDate: null,
+                currentDay: 1,
+                completedDays: {},
+                selectedDifficulty: 'medium',
+                dailyNotes: {}
+            };
+            
+            // Motivational quotes
+            const motivationalQuotes = [
+                "The secret of getting ahead is getting started.",
+                "Small daily improvements are the key to staggering long-term results.",
+                "You don't have to be great to start, but you have to start to be great.",
+                "Success is the sum of small efforts, repeated day in and day out.",
+                "The best way to predict your future is to create it.",
+                "Every day is a new opportunity to change your life.",
+                "Discipline is choosing between what you want now and what you want most.",
+                "Your habits determine your future.",
+                "It's not about perfect. It's about effort.",
+                "The only bad workout is the one that didn't happen."
+            ];
+            
+            // DOM elements
+            const elements = {
+                habitsContainer: document.getElementById('habits-container'),
+                addHabitBtn: document.getElementById('add-habit-btn'),
+                completeAllBtn: document.getElementById('complete-all-btn'),
+                resetDayBtn: document.getElementById('reset-day-btn'),
+                addHabitModal: document.getElementById('add-hab
